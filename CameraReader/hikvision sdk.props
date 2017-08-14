@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <LibraryPath Condition="'$(Platform)'=='Win32'">.\lib\x86;.\lib\x86\HCNetSDKCom;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='X64'">.\lib\x64;.\lib\x64\HCNetSDKCom;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link> <AdditionalDependencies>
+   		HCAlarm.lib;
+		HCGeneralCfgMgr.lib;
+		HCPreview.lib;
+		HCCore.lib;
+		HCNetSDK.lib;
+		PlayCtrl.lib;
+		kernel32.lib;
+		user32.lib;
+		gdi32.lib;
+		winspool.lib;
+		comdlg32.lib;
+		advapi32.lib;
+		shell32.lib;
+		ole32.lib;
+		oleaut32.lib;
+		uuid.lib;
+		odbc32.lib;
+		odbccp32.lib;%(AdditionalDependencies)
+	</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

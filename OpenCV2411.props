@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(OPENCV)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(OPENCV)\$(PlatformTarget)\vc12\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='OpenCL Debug' Or '$(Configuration)'=='CUDA Debug' Or '$(Configuration)'=='NoSSE Debug' ">
+      <AdditionalDependencies>opencv_core2411d.lib;opencv_highgui2411d.lib;opencv_imgproc2411d.lib;opencv_legacy2411d.lib;opencv_video2411d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Release' Or '$(Configuration)'=='OpenCL Release' Or '$(Configuration)'=='CUDA Release' Or '$(Configuration)'=='NoSSE Release' ">
+      <AdditionalDependencies>opencv_core2411.lib;opencv_highgui2411.lib;opencv_imgproc2411.lib;opencv_legacy2411.lib;opencv_video2411.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent Label="OPENCVDLL">
+      <Command>
+        echo
+        copy "$(OPENCV)\$(PlatformTarget)\vc12\bin\opencv_core2411.dll" "$(OutDir)"
+        copy "$(OPENCV)\$(PlatformTarget)\vc12\bin\opencv_highgui2411.dll" "$(OutDir)"
+        copy "$(OPENCV)\$(PlatformTarget)\vc12\bin\opencv_imgproc2411.dll" "$(OutDir)"
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

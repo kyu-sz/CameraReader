@@ -1,0 +1,1 @@
+You must have the DLLs of HikVision SDK under your program directory.

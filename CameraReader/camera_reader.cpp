@@ -174,7 +174,7 @@ namespace Theia
 			return img_buf_;
 		}
 
-		cv::Mat CWebCamReader::GetImage()
+		const cv::Mat& CWebCamReader::GetImage()
 		{
 			while (!img_prepared_)
 				Sleep(5);
@@ -183,7 +183,7 @@ namespace Theia
 			return img_buf_;
 		}
 
-		cv::Mat CUSBCamReader::GetImage()
+		const cv::Mat& CUSBCamReader::GetImage()
 		{
 			auto& cam = usb_cams_[usb_camera_device_];
 			while (!cam.lock.try_lock())

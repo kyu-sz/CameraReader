@@ -138,7 +138,7 @@ namespace Theia
 			/*! Get the next image with default parameters.
 			 *	@return			The image newly retrieved.
 			 */
-			virtual cv::Mat GetImage() = 0;
+			virtual const cv::Mat& GetImage() = 0;
 
 			/*! Get the last image retrieved.
 			 *	Called only after calling GetImage.
@@ -191,11 +191,11 @@ namespace Theia
 			 *	Remember to call Logout() before deconstruction if logged in.
 			 */
 			virtual ~CWebCamReader();
-
+			
 			/*! Get the next image with default parameters.
-			 *	@return			The image newly retrieved.
+			 *	@return	The image newly retrieved.
 			 */
-			virtual cv::Mat GetImage();
+			const cv::Mat& GetImage();
 
 			/*! Get the error message of the web camera.
 			 *	@return			A const pointer to a static string containing the error message.
@@ -256,9 +256,9 @@ namespace Theia
 		{
 		public:
 			/*! Get the next image with default parameters.
-			 *	@return			The image newly retrieved.
+			 *	@return	The image newly retrieved.
 			 */
-			cv::Mat GetImage();
+			const cv::Mat& GetImage();
 
 			/*! Constructor of CUSBCamReader.
 			 *	Opens a capture of the camera specified by the given camera code,

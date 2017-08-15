@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <cstdlib>
+#include <unordered_map>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -11,19 +12,58 @@
 #include <CameraReader/CameraReader/hikvision/PlayM4.h>
 #include <CameraReader/CameraReader/hikvision/HCNetSDK.h>
 
-using std::cin;
-using std::cout;
-using std::endl;
-using std::string;
-using std::map;
-using std::vector;
-using cv::Mat;
-using cv::VideoCapture;
+using namespace std;
+using namespace cv;
 
 namespace Theia
 {
 	namespace Camera
 	{
+		struct USBCam
+		{
+			int usage_cnt = 0;
+			VideoCapture cap;
+		};
+		//! Key is device ID.
+		unordered_map<int, USBCam> usb_cams_;
+		void ReleaseUSBCap(int usb_camera_device)
+		{
+			if (!--usb_cams_[usb_camera_device].usage_cnt)
+				usb_cams_[usb_camera_device].cap.release();
+		}
+		void InitUSBCap(int usb_camera_device, int max_img_width, int max_img_height)
+		{
+			if (!usb_cams_.count(usb_camera_device))
+				usb_cams_[usb_camera_device] = USBCam();
+
+			USBCam& cam = usb_cams_[usb_camera_device];
+
+			if (!cam.usage_cnt)
+			{
+				cam.cap.open(usb_camera_device);
+				Mat test_frame;
+
+				if (cam.cap.isOpened())
+				{
+					int failed_times = -1;
+					do
+					{
+						cam.cap >> test_frame;
+						++failed_times;
+						if (failed_times > 10)
+							throw CCameraNotFoundException("Cannot find USB camera!");
+					} while (test_frame.empty());
+
+					cam.cap.set(CV_CAP_PROP_FRAME_WIDTH, max_img_width);
+					cam.cap.set(CV_CAP_PROP_FRAME_HEIGHT, max_img_height);
+				}
+				else
+					throw CCameraNotFoundException("Cannot find USB camera!");
+			}
+
+			++cam.usage_cnt;
+		}
+
 		map<DWORD, CWebCamReader*> g_client_list;
 		int CWebCamReader::g_client_cnt = 0;
 
@@ -146,7 +186,7 @@ namespace Theia
 
 		cv::Mat CUSBCamReader::GetImage()
 		{
-			bool ret = usb_video_capture_.read(img_buf_);
+			bool ret = usb_cams_[usb_camera_device_].cap.read(img_buf_);
 			if (!ret)
 				img_buf_ = cv::Mat(0, 0, CV_8UC3);
 			return img_buf_;
@@ -452,33 +492,16 @@ namespace Theia
 
 		CUSBCamReader::~CUSBCamReader()
 		{
-			usb_video_capture_.release();
+			ReleaseUSBCap(usb_camera_device_);
 		}
 
 		CUSBCamReader::CUSBCamReader(int usb_camera_device, int max_img_width, int max_img_height) :
-			usb_video_capture_(usb_camera_device)
+			usb_camera_device_(usb_camera_device)
 		{
-			Mat test_frame;
+			InitUSBCap(usb_camera_device, max_img_width, max_img_height);
 
-			if (usb_video_capture_.isOpened())
-			{
-				int failed_times = -1;
-				do
-				{
-					usb_video_capture_ >> test_frame;
-					++failed_times;
-					if (failed_times > 10)
-						throw CCameraNotFoundException("Cannot find USB camera!");
-				} while (test_frame.empty());
-
-				usb_video_capture_.set(CV_CAP_PROP_FRAME_WIDTH, max_img_width);
-				usb_video_capture_.set(CV_CAP_PROP_FRAME_HEIGHT, max_img_height);
-			}
-			else
-				throw CCameraNotFoundException("Cannot find USB camera!");
-
-			default_img_width_ = (int)usb_video_capture_.get(CV_CAP_PROP_FRAME_WIDTH);
-			default_img_height_ = (int)usb_video_capture_.get(CV_CAP_PROP_FRAME_HEIGHT);
+			default_img_width_ = (int)usb_cams_[usb_camera_device_].cap.get(CV_CAP_PROP_FRAME_WIDTH);
+			default_img_height_ = (int)usb_cams_[usb_camera_device_].cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 		}
 
 		CWebCamReader::~CWebCamReader()

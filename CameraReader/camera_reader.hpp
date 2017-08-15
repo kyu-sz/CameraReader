@@ -168,7 +168,7 @@ namespace Theia
 		{
 		public:
 			/*! Login to the web camera.
-			 *	@return			The height of the frame.
+			 *	@return	The last error occurred (0 for no error).
 			 */
 			long Login(
 				_In_ const char* dev_ip,
@@ -280,7 +280,7 @@ namespace Theia
 			 */
 			static bool EnumerateCameras(_In_ std::vector<int> &cam_idx);
 		private:
-			cv::VideoCapture usb_video_capture_;	//! OpenCV video capture. Used for USB camera capture here.
+			int usb_camera_device_;	//! Device ID of the USB camera.
 		};
 
 		/*! Convert the type of the image according to the param channels.
@@ -295,5 +295,40 @@ namespace Theia
 		 *	@param	for_face	If set as true, the image would be assumed to be a face image, then balanced specially for faces.
 		 */
 		void CAMERAREADER_API Balance(_Inout_ cv::Mat& img, bool for_global = true, bool for_face = true);
+		
+		/*! Used for simulating a web camera reader with a USB camera reader when you don't have a web camera.
+		 */
+		class CAMERAREADER_API CFakeWebCamReader : public CWebCamReader
+		{
+		public:
+			/*! Do nothing.
+			 *	@return	The last error occurred (0 for no error).
+			 */
+			inline long Login(
+				_In_ const char* dev_ip,
+				unsigned short port,
+				_In_ const char* username,
+				_In_ const char* passwd)
+			{}
+			/*! Do nothing.
+			 */
+			inline void Logout() {}
+
+			/*! Constructor of CFakeWebCamReader.
+			 */
+			inline CFakeWebCamReader(int usb_camera_device = 0, int max_img_width = 1980, int max_img_height = 1080)
+				: CWebCamReader(max_img_width, max_img_height), agent_(usb_camera_device, max_img_width, max_img_height)
+			{}
+			/*! Deconstructor of CFakeWebCamReader.
+			 */
+			inline virtual ~CFakeWebCamReader() {}
+
+			/*! Get the next image (actually from the USB camera) with default parameters.
+			 *	@return	The image newly retrieved.
+			 */
+			inline cv::Mat GetImage() { return agent_.GetImage(); }
+		private:
+			CUSBCamReader agent_;
+		};
 	}
 }

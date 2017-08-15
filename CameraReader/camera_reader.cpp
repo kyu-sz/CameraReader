@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <cstdlib>
+#include <mutex>
 #include <unordered_map>
 
 #include <opencv2/highgui/highgui.hpp>
@@ -23,6 +24,7 @@ namespace Theia
 		{
 			int usage_cnt = 0;
 			VideoCapture cap;
+			mutex lock;
 		};
 		//! Key is device ID.
 		unordered_map<int, USBCam> usb_cams_;
@@ -33,9 +35,6 @@ namespace Theia
 		}
 		void InitUSBCap(int usb_camera_device, int max_img_width, int max_img_height)
 		{
-			if (!usb_cams_.count(usb_camera_device))
-				usb_cams_[usb_camera_device] = USBCam();
-
 			USBCam& cam = usb_cams_[usb_camera_device];
 
 			if (!cam.usage_cnt)
@@ -186,7 +185,11 @@ namespace Theia
 
 		cv::Mat CUSBCamReader::GetImage()
 		{
-			bool ret = usb_cams_[usb_camera_device_].cap.read(img_buf_);
+			auto& cam = usb_cams_[usb_camera_device_];
+			while (!cam.lock.try_lock())
+				Sleep(1);
+			bool ret = cam.cap.read(img_buf_);
+			cam.lock.unlock();
 			if (!ret)
 				img_buf_ = cv::Mat(0, 0, CV_8UC3);
 			return img_buf_;

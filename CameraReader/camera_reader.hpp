@@ -170,7 +170,7 @@ namespace Theia
 			/*! Login to the web camera.
 			 *	@return	The last error occurred (0 for no error).
 			 */
-			long Login(
+			virtual long Login(
 				_In_ const char* dev_ip,
 				unsigned short port,
 				_In_ const char* username,
@@ -178,7 +178,7 @@ namespace Theia
 			/*! Logout from the web camera.
 			 *	Remember to call this before deconstruction if logged in.
 			 */
-			void Logout();
+			virtual void Logout();
 
 			/*! Constructor of CWebCamReader.
 			 *	Initializes basic environment with maximum image size parameters.
@@ -195,7 +195,7 @@ namespace Theia
 			/*! Get the next image with default parameters.
 			 *	@return			The image newly retrieved.
 			 */
-			cv::Mat GetImage();
+			virtual cv::Mat GetImage();
 
 			/*! Get the error message of the web camera.
 			 *	@return			A const pointer to a static string containing the error message.

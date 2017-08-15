@@ -328,7 +328,7 @@ namespace Theia
 			/*! Get the next image (actually from the USB camera) with default parameters.
 			 *	@return	The image newly retrieved.
 			 */
-			inline cv::Mat GetImage() { return agent_.GetImage(); }
+			inline const cv::Mat& GetImage() { return agent_.GetImage(); }
 		private:
 			CUSBCamReader agent_;
 		};

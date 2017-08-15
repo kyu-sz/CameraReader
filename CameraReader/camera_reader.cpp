@@ -31,7 +31,10 @@ namespace Theia
 		void ReleaseUSBCap(int usb_camera_device)
 		{
 			if (!--usb_cams_[usb_camera_device].usage_cnt)
+			{
 				usb_cams_[usb_camera_device].cap.release();
+				cout << "USB camera " << usb_camera_device << " released!" << endl;
+			}
 		}
 		void InitUSBCap(int usb_camera_device, int max_img_width, int max_img_height)
 		{
@@ -44,17 +47,19 @@ namespace Theia
 
 				if (cam.cap.isOpened())
 				{
+					cam.cap.set(CV_CAP_PROP_FRAME_WIDTH, max_img_width);
+					cam.cap.set(CV_CAP_PROP_FRAME_HEIGHT, max_img_height);
+
 					int failed_times = -1;
 					do
 					{
 						cam.cap >> test_frame;
 						++failed_times;
-						if (failed_times > 10)
-							throw CCameraNotFoundException("Cannot find USB camera!");
+						if (failed_times > 1000)
+							throw CCameraNoInputException("The USB camera's input is empty!");
 					} while (test_frame.empty());
 
-					cam.cap.set(CV_CAP_PROP_FRAME_WIDTH, max_img_width);
-					cam.cap.set(CV_CAP_PROP_FRAME_HEIGHT, max_img_height);
+					cout << "USB camera " << usb_camera_device << " initialized! (" << test_frame.cols << 'x' << test_frame.rows << ')' << endl;
 				}
 				else
 					throw CCameraNotFoundException("Cannot find USB camera!");
@@ -188,10 +193,13 @@ namespace Theia
 			auto& cam = usb_cams_[usb_camera_device_];
 			while (!cam.lock.try_lock())
 				Sleep(1);
-			bool ret = cam.cap.read(img_buf_);
+			int attempt_cnt = 0;
+			do
+			{
+				cam.cap >> img_buf_;
+				++attempt_cnt;
+			} while (img_buf_.empty() && attempt_cnt < 100);
 			cam.lock.unlock();
-			if (!ret)
-				img_buf_ = cv::Mat(0, 0, CV_8UC3);
 			return img_buf_;
 		}
 

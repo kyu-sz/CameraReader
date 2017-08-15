@@ -230,8 +230,8 @@ namespace Theia
 		};
 
 		/*!	@class	CCameraNotFoundException
-		 *	@brief	Exception for cases that specified USB camera device is not found.
-		 *	This exception is raised when the specified USB camera device is not found.
+		 *	@brief	Exception for cases that specified camera device is not found.
+		 *	This exception is raised when the specified camera device is not found.
 		 */
 		class CCameraNotFoundException : public std::runtime_error
 		{
@@ -245,6 +245,24 @@ namespace Theia
 			 *	@param	_Message	Const pointer to a C string containing the error message.
 			 */
 			explicit CCameraNotFoundException(_In_ const char* _Message) : std::runtime_error(_Message) {}
+		};
+
+		/*!	@class	CCameraNoInputException
+		 *	@brief	Exception for cases that specified camera device is not inputting.
+		 *	This exception is raised when the specified camera device is not inputting.
+		 */
+		class CCameraNoInputException : public std::runtime_error
+		{
+		public:
+			/*!	@brief Construct from message string.
+			 *	@param	_Message	Reference to a std::string containing the error message.
+			 */
+			explicit CCameraNoInputException(_In_ const std::string& _Message) : std::runtime_error(_Message.c_str()) {}
+
+			/*!	@brief Construct from message string.
+			 *	@param	_Message	Const pointer to a C string containing the error message.
+			 */
+			explicit CCameraNoInputException(_In_ const char* _Message) : std::runtime_error(_Message) {}
 		};
 
 		/*!	@class CUSBCamReader

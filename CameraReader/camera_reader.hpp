@@ -309,7 +309,9 @@ namespace Theia
 				unsigned short port,
 				_In_ const char* username,
 				_In_ const char* passwd)
-			{}
+			{
+				return 0;
+			}
 			/*! Do nothing.
 			 */
 			inline void Logout() {}

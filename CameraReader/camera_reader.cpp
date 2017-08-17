@@ -22,6 +22,31 @@
 #define NET_DVR_NOERROR 0
 #endif
 
+#ifdef _WIN32
+//! Pause and wait for a key.
+#define PAUSE system("PAUSE")
+#include <direct.h>
+//! Get the running directory.
+#define GETCWD(buf,size) _getcwd(buf,size)
+//! Sleep for x milliseconds.
+#define SLEEP_MS(x) Sleep(x)
+//! p_Tm is a preallocated "tm" structure. There is no guarantee that the resulting p_Tm remains at the same memory address.
+#define LOCALTIME(p_Tm, p_Time) (localtime_s(p_Tm, p_Time), *p_Tm)
+#define PATH_MAX _MAX_PATH
+#define GetAbsolutePath(filename, buf_len, buf)	GetFullPathNameA(filename, buf_len, buf, NULL)
+#else
+//! Pause and wait for a key.
+#define PAUSE getc(stdin)
+#include <unistd.h>
+//! Get the running directory.
+#define GETCWD(buf,size) getcwd(buf,size)
+//! Sleep for x milliseconds.
+#define SLEEP_MS(x) usleep(x * 1000)
+//! p_Tm is a preallocated "tm" structure. There is no guarantee that the resulting p_Tm remains at the same memory address.
+#define LOCALTIME(p_Tm, p_Time) (delete p_Tm, p_Tm = localtime(p_Time))
+#define GetAbsolutePath(filename, buf_len, buf)	realpath(filename, buf)
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -130,7 +155,7 @@ namespace Theia
 							break;
 						}
 						cout << "Buffer overflow when input data! Retrying after 5ms..." << endl;
-						Sleep(1);
+						SLEEP_MS(1);
 					}
 
 					//cout << dwBufSize << endl;
@@ -146,7 +171,7 @@ namespace Theia
 						PlayM4_GetPictureSize(pClient->port_, &pClient->default_img_width_, &pClient->default_img_height_);
 						pClient->img_prepared_ = true;
 
-						Sleep(10);
+						SLEEP_MS(10);
 					}
 				}
 			}
@@ -201,7 +226,7 @@ namespace Theia
 			return img_buf_;
 #else
 			while (!img_prepared_)
-				Sleep(5);
+				SLEEP_MS(5);
 			img_buf_ = cv::Mat(default_img_height_, default_img_width_, CV_8UC4, decode_buf_ + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER));
 			img_prepared_ = false;
 			return img_buf_;
@@ -212,7 +237,7 @@ namespace Theia
 		{
 			auto& cam = usb_cams_[usb_camera_device_];
 			while (!cam.lock.try_lock())
-				Sleep(1);
+				SLEEP_MS(1);
 			int attempt_cnt = 0;
 			do
 			{

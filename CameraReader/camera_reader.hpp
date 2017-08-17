@@ -89,6 +89,13 @@
 #define _Outptr_
 #endif
 
+// HikVision SDK is not available on ARM.
+#if defined(__arm__) || defined(__aarch64__)
+//! Define _NO_HKSDK in situations where HikVision SDK is not available.
+//! The module will then use OpenCV VideoCapture to read from web cameras.
+#define _NO_HKSDK
+#endif
+
 /*! @namespace Theia
  *	Programs by Theia.
  */
@@ -202,6 +209,14 @@ namespace Theia
 			 */
 			const char* GetLastError();
 		private:
+			//! Whether this object is connecting an online camera.
+			bool online_;
+
+			cv::VideoCapture cap_;
+
+			//! The code of the last error.
+			long last_error_;
+#ifndef _NO_HKSDK
 			//! The size of decode buffer.
 			size_t decode_buf_size_;
 			//! The decode buffer.
@@ -214,9 +229,6 @@ namespace Theia
 			//! Handle for real play decoding.
 			long real_play_handle_;
 
-			//! The code of the last error.
-			long last_error_;
-
 			//! Counts the number of clients.
 			static int g_client_cnt;
 
@@ -227,6 +239,7 @@ namespace Theia
 				unsigned char *pBuffer,
 				unsigned long dwBufSize,
 				unsigned long dwUser);
+#endif
 		};
 
 		/*!	@class	CCameraNotFoundException
@@ -265,12 +278,12 @@ namespace Theia
 			explicit CCameraNoInputException(_In_ const char* _Message) : std::runtime_error(_Message) {}
 		};
 
-		/*!	@class CUSBCamReader
+		/*!	@class CCamCapReader
 			 *	@brief Helper for USB cameras.
 			 *
 			 *	This is a helper classes for connecting and retrieving videos from USB cameras.
 			 */
-		class CAMERAREADER_API CUSBCamReader : public CCamReader
+		class CAMERAREADER_API CCamCapReader : public CCamReader
 		{
 		public:
 			/*! Get the next image with default parameters.
@@ -278,7 +291,7 @@ namespace Theia
 			 */
 			const cv::Mat& GetImage();
 
-			/*! Constructor of CUSBCamReader.
+			/*! Constructor of CCamCapReader.
 			 *	Opens a capture of the camera specified by the given camera code,
 			 *	and try to set the resolution of the camera according to the specified max image size.
 			 *	@param[in]	usb_camera_device			The code of camera to capture. Availble ones can be obtained from EnumerateCameras(std::vector<int> &).
@@ -286,11 +299,11 @@ namespace Theia
 			 *	@param[in]	max_img_height				Maximum height of images to be captured.
 			 *	@throws		CCameraNotFoundException	If the specified camera device is not found.
 			 */
-			CUSBCamReader(int usb_camera_device = 0, int max_img_width = 1980, int max_img_height = 1080);
-			/*! Deconstructor of CUSBCamReader.
+			CCamCapReader(int usb_camera_device = 0, int max_img_width = 1980, int max_img_height = 1080);
+			/*! Deconstructor of CCamCapReader.
 				Close the camera capture.
 				*/
-			virtual ~CUSBCamReader();
+			virtual ~CCamCapReader();
 
 			/*! List the codes of all available camera devices in the param std::vector.
 			 *	@param[in]	cam_idx		std::vector buffer for the camera codes.
@@ -348,7 +361,7 @@ namespace Theia
 			 */
 			inline const cv::Mat& GetImage() { return agent_.GetImage(); }
 		private:
-			CUSBCamReader agent_;
+			CCamCapReader agent_;
 		};
 	}
 }

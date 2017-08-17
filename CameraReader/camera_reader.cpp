@@ -10,8 +10,17 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <CameraReader/CameraReader/camera_reader.hpp>
+
+#ifdef _NO_HKSDK
+#define CODEC "MPEG-4"
+#else
 #include <CameraReader/CameraReader/hikvision/PlayM4.h>
 #include <CameraReader/CameraReader/hikvision/HCNetSDK.h>
+#endif
+
+#ifndef NET_DVR_NOERROR
+#define NET_DVR_NOERROR 0
+#endif
 
 using namespace std;
 using namespace cv;
@@ -20,25 +29,22 @@ namespace Theia
 {
 	namespace Camera
 	{
-		struct USBCam
+		struct CamCap
 		{
 			int usage_cnt = 0;
 			VideoCapture cap;
 			mutex lock;
 		};
 		//! Key is device ID.
-		unordered_map<int, USBCam> usb_cams_;
-		void ReleaseUSBCap(int usb_camera_device)
+		unordered_map<int, CamCap> usb_cams_;
+		void ReleaseCap(CamCap& cam_cap)
 		{
-			if (!--usb_cams_[usb_camera_device].usage_cnt)
-			{
-				usb_cams_[usb_camera_device].cap.release();
-				cout << "USB camera " << usb_camera_device << " released!" << endl;
-			}
+			if (!--cam_cap.usage_cnt)
+				cam_cap.cap.release();
 		}
 		void InitUSBCap(int usb_camera_device, int max_img_width, int max_img_height)
 		{
-			USBCam& cam = usb_cams_[usb_camera_device];
+			CamCap& cam = usb_cams_[usb_camera_device];
 
 			if (!cam.usage_cnt)
 			{
@@ -69,8 +75,11 @@ namespace Theia
 		}
 
 		map<DWORD, CWebCamReader*> g_client_list;
+#ifndef _NO_HKSDK
 		int CWebCamReader::g_client_cnt = 0;
+#endif
 
+#ifndef _NO_HKSDK
 		void CALLBACK g_RealDataCallBack_V30(LONG lRealHandle, DWORD dwDataType, BYTE *pBuffer, DWORD dwBufSize, DWORD dwUser)
 		{
 			//HWND hWnd = GetConsoleWindow();
@@ -142,6 +151,7 @@ namespace Theia
 				}
 			}
 		}
+#endif
 
 		cv::Mat CCamReader::GetImage(int width, int height, int channels, bool crop, bool flip, int flip_mode)
 		{
@@ -181,14 +191,24 @@ namespace Theia
 
 		const cv::Mat& CWebCamReader::GetImage()
 		{
+#ifdef _NO_HKSDK
+			int attempt_cnt = 0;
+			do
+			{
+				cap_ >> img_buf_;
+				++attempt_cnt;
+			} while (img_buf_.empty() && attempt_cnt < 100);
+			return img_buf_;
+#else
 			while (!img_prepared_)
 				Sleep(5);
 			img_buf_ = cv::Mat(default_img_height_, default_img_width_, CV_8UC4, decode_buf_ + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER));
 			img_prepared_ = false;
 			return img_buf_;
+#endif
 		}
 
-		const cv::Mat& CUSBCamReader::GetImage()
+		const cv::Mat& CCamCapReader::GetImage()
 		{
 			auto& cam = usb_cams_[usb_camera_device_];
 			while (!cam.lock.try_lock())
@@ -203,6 +223,7 @@ namespace Theia
 			return img_buf_;
 		}
 
+#ifndef _NO_HKSDK
 		void CALLBACK g_ExceptionCallBack(DWORD dwType, LONG user_id_, LONG lHandle, void *pUser)
 		{
 			char tempbuf[256] = { 0 };
@@ -215,6 +236,7 @@ namespace Theia
 				break;
 			}
 		}
+#endif
 
 #define SKIN_R	227
 #define SKIN_G	181
@@ -391,6 +413,9 @@ namespace Theia
 
 		LONG CWebCamReader::Login(_In_ const char* dev_ip, WORD port, _In_ const char* username, _In_ const char* passwd)
 		{
+			if (online_)
+				Logout();
+#ifndef _NO_HKSDK
 			//---------------------------------------
 			// 注册设备
 			NET_DVR_DEVICEINFO_V30 struDeviceInfo;
@@ -431,6 +456,14 @@ namespace Theia
 				printf("NET_DVR_SetRealDataCallBack error\n");
 				return (last_error_ = NET_DVR_GetLastError());
 			}
+#else
+			stringstream rtsp_url_ss;
+			rtsp_url_ss << "rtsp://" << username << ":" << passwd << "@" << dev_ip << ":" << port << "/" << CODEC << "/ch1/main/av_stream";
+			cap_.open(rtsp_url_ss.str());
+			if (!cap_.isOpened())
+				return -1;
+#endif
+			online_ = true;
 
 			return (last_error_ = NET_DVR_NOERROR);
 		}
@@ -462,11 +495,16 @@ namespace Theia
 
 		const char* CWebCamReader::GetLastError()
 		{
+#ifndef _NO_HKSDK
 			return NET_DVR_GetErrorMsg(&last_error_);
+#else
+			return last_error_ == 0 ? "No error." : last_error_ == -1 ? "Unable to open the destination camera with RTSP." : "Unknown error.";
+#endif
 		}
 
 		void CWebCamReader::Logout()
 		{
+#ifndef _NO_HKSDK
 			//---------------------------------------
 			PlayM4_Stop(port_);
 			PlayM4_CloseStream(port_);
@@ -475,10 +513,15 @@ namespace Theia
 			NET_DVR_StopRealPlay(real_play_handle_);
 			//注销用户
 			NET_DVR_Logout_V30(user_id_);
+#else
+			cap_.release();
+#endif
+			online_ = false;
 		}
 
-		CWebCamReader::CWebCamReader(int max_img_width, int max_img_height)
+		CWebCamReader::CWebCamReader(int max_img_width, int max_img_height) : online_(false)
 		{
+#ifndef _NO_HKSDK
 			if (g_client_cnt == 0)
 			{
 				//---------------------------------------
@@ -497,16 +540,15 @@ namespace Theia
 			decode_buf_ = (PBYTE)_aligned_malloc(decode_buf_size_, 32);
 
 			++g_client_cnt;
-
-			return;
+#endif
 		}
 
-		CUSBCamReader::~CUSBCamReader()
+		CCamCapReader::~CCamCapReader()
 		{
-			ReleaseUSBCap(usb_camera_device_);
+			ReleaseCap(usb_cams_[usb_camera_device_]);
 		}
 
-		CUSBCamReader::CUSBCamReader(int usb_camera_device, int max_img_width, int max_img_height) :
+		CCamCapReader::CCamCapReader(int usb_camera_device, int max_img_width, int max_img_height) :
 			usb_camera_device_(usb_camera_device)
 		{
 			InitUSBCap(usb_camera_device, max_img_width, max_img_height);
@@ -517,17 +559,17 @@ namespace Theia
 
 		CWebCamReader::~CWebCamReader()
 		{
+#ifndef _NO_HKSDK
 			--g_client_cnt;
 
 			if (!g_client_cnt)
 				NET_DVR_Cleanup();
 
 			_aligned_free(decode_buf_);
-
-			return;
+#endif
 		}
 
-		bool CUSBCamReader::EnumerateCameras(vector<int> &cam_idx)
+		bool CCamCapReader::EnumerateCameras(vector<int> &cam_idx)
 		{
 			cam_idx.clear();
 			struct CapDriver{

@@ -436,7 +436,7 @@ namespace Theia
 			}
 		}
 
-		LONG CWebCamReader::Login(_In_ const char* dev_ip, WORD port, _In_ const char* username, _In_ const char* passwd)
+		long CWebCamReader::Login(_In_ const char* dev_ip, unsigned short port, _In_ const char* username, _In_ const char* passwd)
 		{
 			if (online_)
 				Logout();

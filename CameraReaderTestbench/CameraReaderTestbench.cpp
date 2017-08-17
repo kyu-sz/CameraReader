@@ -8,7 +8,7 @@
 
 using namespace Theia::Camera;
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
 	CWebCamReader camera;
 	camera.Login("10.1.1.120", 8000, "admin", "hk123456");

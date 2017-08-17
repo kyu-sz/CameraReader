@@ -99,8 +99,8 @@ namespace Theia
 			++cam.usage_cnt;
 		}
 
-		map<DWORD, CWebCamReader*> g_client_list;
 #ifndef _NO_HKSDK
+		map<DWORD, CWebCamReader*> g_client_list;
 		int CWebCamReader::g_client_cnt = 0;
 #endif
 

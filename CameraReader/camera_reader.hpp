@@ -89,6 +89,8 @@
 #define _Outptr_
 #endif
 
+//#define _NO_HKSDK
+
 // HikVision SDK is not available on ARM.
 #if defined(__arm__) || defined(__aarch64__)
 //! Define _NO_HKSDK in situations where HikVision SDK is not available.

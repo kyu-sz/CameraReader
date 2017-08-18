@@ -12,7 +12,7 @@
 #include <CameraReader/CameraReader/camera_reader.hpp>
 
 #ifdef _NO_HKSDK
-#define CODEC "MPEG-4"
+#define CODEC "h264"
 #else
 #include <CameraReader/CameraReader/hikvision/PlayM4.h>
 #include <CameraReader/CameraReader/hikvision/HCNetSDK.h>
@@ -49,6 +49,8 @@
 
 using namespace std;
 using namespace cv;
+using std::cout;
+using std::cin;
 
 namespace Theia
 {
@@ -142,6 +144,7 @@ namespace Theia
 						break;
 					}
 				}
+				break;
 			case NET_DVR_STREAMDATA:   //码流数据
 				if (dwBufSize > 0 && pClient->port_ != -1)
 				{
@@ -149,13 +152,18 @@ namespace Theia
 
 					while (!PlayM4_InputData(pClient->port_, pBuffer, dwBufSize))
 					{
-						if (PlayM4_GetLastError(pClient->port_) != PLAYM4_BUF_OVER)
+						if (PlayM4_GetLastError(pClient->port_) != PLAYM4_BUF_OVER && PlayM4_GetLastError(pClient->port_) != PLAYM4_ORDER_ERROR)
 						{
 							cout << "Error " << PlayM4_GetLastError(pClient->port_) << " occured when inputting data!" << endl;
 							break;
 						}
-						cout << "Buffer overflow when input data! Retrying after 5ms..." << endl;
-						SLEEP_MS(1);
+						else if (PlayM4_GetLastError(pClient->port_) == PLAYM4_BUF_OVER)
+						{
+							cout << "Buffer overflow when input data! Retrying after 5ms..." << endl;
+							SLEEP_MS(1);
+						}
+						else
+							cout << "PlayM4 order error! Retrying..." << endl;
 					}
 
 					//cout << dwBufSize << endl;
@@ -457,7 +465,6 @@ namespace Theia
 			}
 			g_client_list[user_id_] = this;
 
-
 			//---------------------------------------
 			//启动预览并设置回调数据流
 			NET_DVR_CLIENTINFO ClientInfo = { 0 };
@@ -476,7 +483,7 @@ namespace Theia
 				return (last_error_ = NET_DVR_GetLastError());
 			}
 
-			if (!NET_DVR_SetRealDataCallBack(real_play_handle_, g_RealDataCallBack_V30, 0))
+			if (!NET_DVR_SetRealDataCallBack(real_play_handle_, g_RealDataCallBack_V30, user_id_))
 			{
 				printf("NET_DVR_SetRealDataCallBack error\n");
 				return (last_error_ = NET_DVR_GetLastError());
@@ -484,8 +491,9 @@ namespace Theia
 #else
 			stringstream rtsp_url_ss;
 			rtsp_url_ss << "rtsp://" << username << ":" << passwd << "@" << dev_ip << ":" << port << "/" << CODEC << "/ch1/main/av_stream";
-			cap_.open(rtsp_url_ss.str());
-			if (!cap_.isOpened())
+			string rtsp_url = rtsp_url_ss.str();
+			cout << "Connecting web camera " << dev_ip << ":" << port << " through RTSP protocol at " << rtsp_url << endl;
+			if (!cap_.open(rtsp_url))
 				return -1;
 #endif
 			online_ = true;
@@ -544,7 +552,7 @@ namespace Theia
 			online_ = false;
 		}
 
-		CWebCamReader::CWebCamReader(int max_img_width, int max_img_height) : online_(false)
+		CWebCamReader::CWebCamReader(int max_img_width, int max_img_height) : port_(-1), online_(false)
 		{
 #ifndef _NO_HKSDK
 			if (g_client_cnt == 0)
